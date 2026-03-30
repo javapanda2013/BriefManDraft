@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>依頼書びるだぁ v1.8.0</title>
+<title>依頼書びるだぁ v1.9.0</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
 
@@ -224,6 +224,12 @@ select option{background:var(--surface)}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:var(--text3)}
 
+/* a/b: 一括編集・テンプレート検索 */
+.search-highlight{background:rgba(26,188,156,.28);border-radius:2px;padding:0 1px}
+.search-result-line{font-size:11px;color:var(--text3);padding:2px 0;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.bulk-op-tab{display:inline-flex;align-items:center;padding:6px 16px;border-radius:var(--radius);cursor:pointer;font-size:13px;font-family:var(--sans);transition:all .15s;border:1px solid var(--border);background:var(--surface);color:var(--text2)}
+.bulk-op-tab.active{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+
 /* ── Diff viewer ── */
 .diff-container{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;font-family:var(--mono);font-size:12px;line-height:1.7}
 .diff-pane{background:var(--surface);display:flex;flex-direction:column;min-width:0}
@@ -272,7 +278,7 @@ select option{background:var(--surface)}
 <div class="mobile-header" id="mobile-header">
   <div>
     <div class="mobile-header-title">依頼書びるだぁ</div>
-    <div class="mobile-header-sub">BriefMandraft v1.8.0</div>
+    <div class="mobile-header-sub">BriefMandraft v1.9.0</div>
   </div>
   <button class="hamburger" onclick="toggleSidebar()" aria-label="メニュー">
     <span></span><span></span><span></span>
@@ -285,7 +291,7 @@ select option{background:var(--surface)}
 <aside class="sidebar">
   <div class="sidebar-logo">
     <div class="logo-mark">// SYSTEM</div>
-    <div class="logo-name">依頼書びるだぁ <span class="version-tag">v1.8.0</span></div>
+    <div class="logo-name">依頼書びるだぁ <span class="version-tag">v1.9.0</span></div>
     <div style="font-family:var(--mono);font-size:10px;color:var(--sidebar-text2);margin-top:2px;letter-spacing:.04em">BriefMandraft</div>
     <!-- b: バージョン切り替えプルダウン（データが複数バージョン存在する場合のみ表示） -->
     <div id="ver-switcher-wrap" style="display:none;align-items:center;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--sidebar-border)">
@@ -417,6 +423,11 @@ select option{background:var(--surface)}
           インポート
         </button>
         <input type="file" id="tpl-import-input" accept=".json" style="display:none" onchange="importTemplate(event)">
+        <!-- a: 一括編集ボタン -->
+        <button class="btn btn-ghost btn-sm" onclick="openBulkEdit()">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M2 8h9M2 12h6"/><path d="M12 10l2 2 2-2M14 12V8"/></svg>
+          一括編集
+        </button>
         <button class="btn btn-primary" onclick="openTplEdit(null)">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v12M2 8h12"/></svg>
           新規登録
@@ -430,6 +441,29 @@ select option{background:var(--surface)}
       <button class="btn btn-ghost btn-sm" onclick="clearTplSelection()">選択解除</button>
     </div>
     <div class="page-body">
+      <!-- b: テンプレート検索バー -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <div style="position:relative;flex:1;min-width:200px;max-width:400px">
+          <input type="text" id="tpl-search" placeholder="テンプレート内の文言を検索..." oninput="filterTemplates()" style="width:100%;padding-left:32px">
+          <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.4;pointer-events:none" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
+        </div>
+        <select id="tpl-search-section" onchange="filterTemplates()" style="width:auto;font-size:12px">
+          <option value="all">全セクション</option>
+          <option value="taboo">禁忌・制約</option>
+          <option value="basics">基本事項</option>
+          <option value="reportFormat">作業報告形式</option>
+        </select>
+        <span id="search-result-count" style="font-size:12px;color:var(--text3);white-space:nowrap"></span>
+        <button class="btn btn-ghost btn-xs" id="clear-search-btn" style="display:none" onclick="clearSearch()">✕ クリア</button>
+      </div>
+      <!-- b: 検索結果表示エリア -->
+      <div id="search-results-section" style="display:none;margin-bottom:16px">
+        <div class="tpl-section-label">検索結果</div>
+        <div class="card-grid" id="search-results-list"></div>
+        <div id="search-no-results" style="display:none;font-size:12px;color:var(--text3);padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius)">
+          一致する文言が見つかりませんでした
+        </div>
+      </div>
       <!-- User templates -->
       <div id="user-tpl-section">
         <div class="tpl-section-label">ユーザー作成テンプレート</div>
@@ -439,7 +473,7 @@ select option{background:var(--surface)}
         <div class="card-grid" id="user-tpl-list" style="margin-bottom:24px"></div>
       </div>
       <!-- Default templates -->
-      <div>
+      <div id="default-tpl-section">
         <div class="tpl-section-label">デフォルトテンプレート</div>
         <div class="card-grid" id="default-tpl-list"></div>
       </div>
@@ -567,6 +601,14 @@ select option{background:var(--surface)}
   <div class="help-card">
     <h3>🔍 並列diff表示</h3>
     <p>履歴から「編集して再出力」を選ぶと、変更前・変更後を左右並列で確認するdiffビューアが表示されます。問題なければそのまま出力へ進めます。</p>
+  </div>
+  <div class="help-card">
+    <h3>🔎 テンプレート内文言検索</h3>
+    <p>テンプレート管理画面の検索バーからテンプレート内の文言を横断検索できます。対象セクション（禁忌・基本事項・作業報告形式）を絞り込んだ検索も可能です。</p>
+  </div>
+  <div class="help-card">
+    <h3>✏️ 一括編集</h3>
+    <p>「一括編集」ボタンから、複数のテンプレートに文言を一括追加または置換できます。全テンプレートを対象にするほか、チェックボックスで選択したテンプレートのみを対象にすることもできます。</p>
   </div>
 </div>
 
@@ -845,13 +887,97 @@ select option{background:var(--surface)}
   </div>
 </div>
 
+<!-- a: 一括編集モーダル -->
+<div class="modal-overlay" id="modal-bulk-edit">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-title">一括編集</div>
+      <button class="modal-close" onclick="closeModal('modal-bulk-edit')">×</button>
+    </div>
+    <div class="modal-body">
+      <!-- 操作モード選択 -->
+      <div style="display:flex;gap:8px">
+        <button class="bulk-op-tab active" id="bulk-tab-add" onclick="switchBulkTab('add')">追加</button>
+        <button class="bulk-op-tab" id="bulk-tab-replace" onclick="switchBulkTab('replace')">置換</button>
+      </div>
+      <!-- 対象テンプレート -->
+      <div class="field">
+        <label class="field-label">対象テンプレート</label>
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+            <input type="radio" name="bulk-target" value="selected" id="bulk-target-selected" style="accent-color:var(--accent);width:auto" onchange="updateBulkTargetCount()">
+            選択中のテンプレート
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+            <input type="radio" name="bulk-target" value="all" id="bulk-target-all" checked style="accent-color:var(--accent);width:auto" onchange="updateBulkTargetCount()">
+            全テンプレート
+          </label>
+        </div>
+        <div id="bulk-target-count" style="font-size:11px;color:var(--text3);margin-top:3px"></div>
+      </div>
+      <!-- a1: 追加パネル -->
+      <div id="bulk-add-panel">
+        <div class="field">
+          <label class="field-label">対象セクション</label>
+          <select id="bulk-add-section" style="width:auto">
+            <option value="taboo">禁忌・制約</option>
+            <option value="basics">基本事項</option>
+            <option value="reportFormat">作業報告形式</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">追加する文言 <span class="req">必須</span></label>
+          <textarea id="bulk-add-text" rows="4" placeholder="追加したい文言を入力してください"></textarea>
+        </div>
+        <div class="field">
+          <label class="field-label">追加位置</label>
+          <div style="display:flex;gap:16px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+              <input type="radio" name="bulk-add-pos" value="end" checked style="accent-color:var(--accent);width:auto">
+              末尾に追加
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+              <input type="radio" name="bulk-add-pos" value="start" style="accent-color:var(--accent);width:auto">
+              先頭に追加
+            </label>
+          </div>
+        </div>
+      </div>
+      <!-- a2: 置換パネル -->
+      <div id="bulk-replace-panel" style="display:none">
+        <div class="field">
+          <label class="field-label">対象セクション</label>
+          <select id="bulk-replace-section" style="width:auto">
+            <option value="all">全セクション</option>
+            <option value="taboo">禁忌・制約</option>
+            <option value="basics">基本事項</option>
+            <option value="reportFormat">作業報告形式</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">置換対象の文言 <span class="req">必須</span></label>
+          <textarea id="bulk-find-text" rows="3" placeholder="置き換えたい文言を入力してください"></textarea>
+        </div>
+        <div class="field">
+          <label class="field-label">置換後の文言 <span class="req">必須</span></label>
+          <textarea id="bulk-replace-text" rows="3" placeholder="置換後の文言を入力してください（空白で削除）"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-bulk-edit')">キャンセル</button>
+      <button class="btn btn-primary btn-sm" onclick="executeBulkEdit()">実行</button>
+    </div>
+  </div>
+</div>
+
 <div class="notif" id="notif"><div class="notif-dot"></div><span id="notif-txt"></span></div>
 
 <script>
 // ═══════════════════════════════════════════════════════════
 // CONSTANTS & SCHEMA
 // ═══════════════════════════════════════════════════════════
-const VERSION = '1.8.0';
+const VERSION = '1.9.0';
 const SCHEMA_VER = 2;
 // b: バージョン別ストレージキー管理（並列保持）
 const STORAGE_KEYS = { 2: 'rrb_v2' }; // 将来: { 2:'rrb_v2', 3:'rrb_v3' } のように追加
@@ -1066,7 +1192,7 @@ function showPage(name) {
   });
   if (name === 'history')   renderHistList();
   if (name === 'drafts')    renderDraftList();
-  if (name === 'templates') { renderTemplateCards(); clearTplSelection(); }
+  if (name === 'templates') { clearSearch(); renderTemplateCards(); clearTplSelection(); }
   if (name === 'settings')  updateStorageDisplay();
   // c: ヘルプコンテンツを初回のみ注入
   if (name === 'help') {
@@ -2675,6 +2801,197 @@ function clearAll() {
   S.templates=[]; S.records=[];
   persist(); initDefaults(); renderTemplateCards(); updateBadges(); updateStorageDisplay();
   notify('全データを削除しました');
+}
+
+// ═══════════════════════════════════════════════════════════
+// a: 一括編集
+// ═══════════════════════════════════════════════════════════
+let _bulkMode = 'add';
+
+function openBulkEdit() {
+  _bulkMode = 'add';
+  switchBulkTab('add');
+  const selectedCount = document.querySelectorAll('.tpl-select-cb:checked').length;
+  if (selectedCount > 0) {
+    document.getElementById('bulk-target-selected').checked = true;
+  } else {
+    document.getElementById('bulk-target-all').checked = true;
+  }
+  updateBulkTargetCount();
+  openModal('modal-bulk-edit');
+}
+
+function switchBulkTab(mode) {
+  _bulkMode = mode;
+  document.getElementById('bulk-tab-add').classList.toggle('active', mode === 'add');
+  document.getElementById('bulk-tab-replace').classList.toggle('active', mode === 'replace');
+  document.getElementById('bulk-add-panel').style.display    = mode === 'add'     ? '' : 'none';
+  document.getElementById('bulk-replace-panel').style.display = mode === 'replace' ? '' : 'none';
+}
+
+function updateBulkTargetCount() {
+  const isAll = document.getElementById('bulk-target-all').checked;
+  const selectedIds = [...document.querySelectorAll('.tpl-select-cb:checked')].map(cb => cb.dataset.id);
+  const count = isAll ? S.templates.length : selectedIds.length;
+  const label = isAll
+    ? `全 ${count} 件のテンプレートが対象`
+    : (count > 0 ? `選択中の ${count} 件のテンプレートが対象` : '選択中のテンプレートがありません');
+  document.getElementById('bulk-target-count').textContent = label;
+}
+
+function getBulkTargetTpls() {
+  const isAll = document.getElementById('bulk-target-all').checked;
+  if (isAll) return S.templates;
+  const ids = [...document.querySelectorAll('.tpl-select-cb:checked')].map(cb => cb.dataset.id);
+  return S.templates.filter(t => ids.includes(t.id));
+}
+
+function executeBulkEdit() {
+  const targets = getBulkTargetTpls();
+  if (!targets.length) { notify('対象テンプレートがありません', 'info'); return; }
+
+  if (_bulkMode === 'add') {
+    const text = document.getElementById('bulk-add-text').value;
+    if (!text.trim()) { notify('追加する文言を入力してください', 'info'); return; }
+    const section = document.getElementById('bulk-add-section').value;
+    const pos = document.querySelector('input[name="bulk-add-pos"]:checked').value;
+    targets.forEach(tpl => {
+      const cur = tpl[section] || '';
+      tpl[section] = pos === 'end'
+        ? (cur ? cur + '\n' + text : text)
+        : (cur ? text + '\n' + cur : text);
+    });
+    persist(); renderTemplateCards();
+    notify(`${targets.length}件のテンプレートに文言を追加しました`);
+    closeModal('modal-bulk-edit');
+  } else {
+    const findText = document.getElementById('bulk-find-text').value;
+    if (!findText) { notify('置換対象の文言を入力してください', 'info'); return; }
+    const replaceText = document.getElementById('bulk-replace-text').value;
+    const sectionVal = document.getElementById('bulk-replace-section').value;
+    const SECTIONS = sectionVal === 'all' ? ['taboo', 'basics', 'reportFormat'] : [sectionVal];
+    let count = 0;
+    targets.forEach(tpl => {
+      SECTIONS.forEach(s => {
+        if (tpl[s] && tpl[s].includes(findText)) {
+          tpl[s] = tpl[s].split(findText).join(replaceText);
+          count++;
+        }
+      });
+    });
+    persist(); renderTemplateCards();
+    if (count > 0) {
+      notify(`${count}箇所を置換しました（${targets.length}件対象）`);
+      closeModal('modal-bulk-edit');
+    } else {
+      notify('置換対象の文言が見つかりませんでした', 'info');
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// b: テンプレート検索
+// ═══════════════════════════════════════════════════════════
+const SEARCH_SECTION_KEYS = {
+  all: ['taboo', 'basics', 'reportFormat'],
+  taboo: ['taboo'], basics: ['basics'], reportFormat: ['reportFormat']
+};
+const SEARCH_SECTION_LABEL = { taboo:'禁忌・制約', basics:'基本事項', reportFormat:'作業報告形式' };
+
+function highlightLine(line, query) {
+  const parts = [];
+  const lline = line.toLowerCase();
+  const lquery = query.toLowerCase();
+  let lastIdx = 0;
+  let idx = lline.indexOf(lquery);
+  while (idx !== -1) {
+    parts.push(esc(line.slice(lastIdx, idx)));
+    parts.push(`<span class="search-highlight">${esc(line.slice(idx, idx + query.length))}</span>`);
+    lastIdx = idx + query.length;
+    idx = lline.indexOf(lquery, lastIdx);
+  }
+  parts.push(esc(line.slice(lastIdx)));
+  return parts.join('');
+}
+
+function filterTemplates() {
+  const query = document.getElementById('tpl-search').value.trim();
+  const section = document.getElementById('tpl-search-section').value;
+  const clearBtn = document.getElementById('clear-search-btn');
+  const resultCount = document.getElementById('search-result-count');
+  const searchSec = document.getElementById('search-results-section');
+  const userSec = document.getElementById('user-tpl-section');
+  const defSec = document.getElementById('default-tpl-section');
+
+  clearBtn.style.display = query ? '' : 'none';
+
+  if (!query) {
+    searchSec.style.display = 'none';
+    userSec.style.display = '';
+    defSec.style.display = '';
+    resultCount.textContent = '';
+    return;
+  }
+
+  const keys = SEARCH_SECTION_KEYS[section] || SEARCH_SECTION_KEYS.all;
+  const lquery = query.toLowerCase();
+
+  const results = [];
+  S.templates.forEach(tpl => {
+    const matches = [];
+    keys.forEach(key => {
+      const text = tpl[key] || '';
+      if (!text.toLowerCase().includes(lquery)) return;
+      text.split('\n').forEach((line, i) => {
+        if (line.toLowerCase().includes(lquery)) {
+          matches.push({ section: SEARCH_SECTION_LABEL[key], line, lineNo: i + 1 });
+        }
+      });
+    });
+    if (matches.length) results.push({ tpl, matches });
+  });
+
+  resultCount.textContent = `${results.length}件ヒット`;
+  userSec.style.display = 'none';
+  defSec.style.display = 'none';
+  searchSec.style.display = '';
+
+  const list = document.getElementById('search-results-list');
+  const noRes = document.getElementById('search-no-results');
+  if (!results.length) {
+    list.innerHTML = '';
+    noRes.style.display = '';
+    return;
+  }
+  noRes.style.display = 'none';
+  list.innerHTML = results.map(r => {
+    const MAX_LINES = 3;
+    const shown = r.matches.slice(0, MAX_LINES);
+    const more = r.matches.length - MAX_LINES;
+    const lineHtml = shown.map(m =>
+      `<div class="search-result-line">[${esc(m.section)}] ${highlightLine(m.line, query)}</div>`
+    ).join('');
+    const moreHtml = more > 0 ? `<div class="search-result-line" style="color:var(--accent2)">…他${more}件</div>` : '';
+    return `
+      <div class="tpl-card${r.tpl.isDefault ? '' : ' user-tpl'}">
+        <div class="tpl-header">
+          <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+            <div class="tpl-icon">${r.tpl.icon||'📋'}</div>
+            <div style="flex:1;min-width:0"><div class="tpl-name">${esc(r.tpl.name)}</div></div>
+          </div>
+          <span class="tag tag-accent">${r.matches.length}件</span>
+        </div>
+        <div style="margin:6px 0 8px">${lineHtml}${moreHtml}</div>
+        <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;gap:5px">
+          <button class="btn btn-primary btn-xs" onclick="openTplEdit('${r.tpl.id}')">✏️ 編集</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function clearSearch() {
+  document.getElementById('tpl-search').value = '';
+  filterTemplates();
 }
 
 // ═══════════════════════════════════════════════════════════
