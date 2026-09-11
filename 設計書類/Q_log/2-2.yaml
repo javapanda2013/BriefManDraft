@@ -1,0 +1,20 @@
+group: 2-2
+qs:
+- num: 1
+  seq_id: Q-2-2-1
+  issued_at: '2026-09-11T14:21:07'
+  prerequisites: 'find -type f で repo/https: および repo/https:github.com/javapanda2013/BriefManDraft
+    の全階層を確認、ファイルは1件も存在しない。git status にも表示されない（git は空ディレクトリを追跡しないため）。おそらく過去に https://github.com/...
+    のURLをローカルパスとして誤解釈するコマンドが実行された際の残骸（原因コマンドは特定できていない）。'
+  judgment: repo/https:系残骸ディレクトリの削除要否
+  options:
+  - label: a
+    text: 削除する（再帰探索でファイル0件・全階層空を確認済のため、単純なゴミディレクトリとして削除）
+    recommended: true
+  - label: b
+    text: 削除せず残す（原因調査を先に行いたい場合）
+  recommendation_reason: null
+  answer: a
+  answered_at: '2026-09-11T15:11:04'
+  steps: null
+  step_status: null

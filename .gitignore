@@ -1,0 +1,19 @@
+# 共有コア junction（GROUP-41・2026-09-11）：spec-driven-core への symlink 相当。
+# BriefManDraftは独自GitHubリモートを持つ独立repoのため、他プロジェクト（BorgesTag等）と異なり
+# junction配下が git add -A で誤って巻き込まれるリスクがある（独立サブレビュー指摘で実測確認・87件）。
+.claude/skills/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# エディタ
+.vscode/
+.idea/
+*.swp
+*~

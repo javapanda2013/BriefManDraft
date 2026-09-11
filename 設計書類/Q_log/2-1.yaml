@@ -1,0 +1,19 @@
+group: 2-1
+qs:
+- num: 1
+  seq_id: Q-2-1-1
+  issued_at: '2026-09-11T14:20:54'
+  prerequisites: git branch -a -v で確認：feat/bulk-edit-search と master は共に fd0330f（v1.9.0
+    テンプレート内文言検索・一括編集機能追加）を指しており、差分なし。GitHub remote main 側にも同名ブランチが存在。
+  judgment: feat/bulk-edit-searchブランチの削除要否
+  options:
+  - label: a
+    text: 削除する（masterと同一コミットfd0330fのため重複ブランチとして削除。GitHub側のリモートブランチも削除）
+    recommended: true
+  - label: b
+    text: 削除せず残す（将来の作業再開用に保持）
+  recommendation_reason: null
+  answer: a
+  answered_at: '2026-09-11T15:11:04'
+  steps: null
+  step_status: null

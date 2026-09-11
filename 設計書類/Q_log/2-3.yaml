@@ -1,0 +1,22 @@
+group: 2-3
+qs:
+- num: 1
+  seq_id: Q-2-3-1
+  issued_at: '2026-09-11T14:21:07'
+  prerequisites: 開発ネタ.txt および 初動引き継ぎ_20260911.md§4に記載の3件はいずれも「初期に提案のあった追加機能」として相談中の状態で止まっており、各項目の具体案・実装計画は本セッションではまだユーザーから提示されていない。
+  judgment: 未消化3件（相談中）の着手優先順位
+  options:
+  - label: a
+    text: 出力形式の拡充から着手
+  - label: b
+    text: タグ機能と高度検索から着手
+  - label: c
+    text: ワークフロー管理から着手
+  - label: d
+    text: 着手前に3件それぞれの具体案をユーザーへ提示してから決める
+    recommended: true
+  recommendation_reason: null
+  answer: null
+  answered_at: null
+  steps: null
+  step_status: null

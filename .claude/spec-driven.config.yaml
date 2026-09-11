@@ -1,0 +1,9 @@
+# BriefManDraft プロジェクト・プロファイル（共有コア参照方式。2026-09-11 導入）
+# spec-driven skill bundle 設定。project / planning のみ上書き、他はコア継承。
+project:
+  name: BriefManDraft                  # プロジェクト名（表示用。GitHubリポジトリ名の正式表記に合わせる）
+  root: ..                             # 本プロファイル（.claude/ 配下）からプロジェクトルート（repo/）への相対 path
+
+planning:
+  plan_log: 設計書類/06_プランログ.md
+  changelog: CHANGELOG.md              # 未整備（導入時点で存在しない。運用しながら整備）
