@@ -119,6 +119,8 @@ input[type=text],input[type=number],input[type=url],input[type=email],textarea,s
   transition:border-color .15s,box-shadow .15s;width:100%;outline:none}
 input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,188,156,.12)}
 textarea{resize:vertical;min-height:80px;line-height:1.6}
+/* a4: スクロールバーが出た textarea でもリサイズハンドルを掴みやすいよう、textarea だけ幅を広めに確保 */
+textarea::-webkit-scrollbar{width:14px}
 select option{background:var(--surface)}
 .checkbox-group{display:flex;flex-direction:column;gap:5px}
 .checkbox-option{display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:var(--text)}
@@ -1214,10 +1216,17 @@ function updateBadges() {
 // ═══════════════════════════════════════════════════════════
 // MODALS
 // ═══════════════════════════════════════════════════════════
-const openModal  = id => document.getElementById(id).classList.add('open');
+// a4: 枠外クリックで編集内容が無警告のまま失われる事故を防ぐ（入力があったモーダルのみ背景クリック時に確認）
+const openModal  = id => { const el = document.getElementById(id); el.dataset.dirty = ''; el.classList.add('open'); };
 const closeModal = id => document.getElementById(id).classList.remove('open');
 document.querySelectorAll('.modal-overlay').forEach(el => {
-  el.addEventListener('click', e => { if (e.target === el) closeModal(el.id); });
+  el.addEventListener('input',  () => { el.dataset.dirty = '1'; }, true);
+  el.addEventListener('change', () => { el.dataset.dirty = '1'; }, true);
+  el.addEventListener('click', e => {
+    if (e.target !== el) return;
+    if (el.dataset.dirty === '1' && !confirm('編集中の内容を破棄して閉じますか？\n（保存していない変更は失われます）')) return;
+    closeModal(el.id);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -1231,6 +1240,18 @@ function notify(msg, type='success') {
   el.classList.add('show');
   clearTimeout(_nt);
   _nt = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// a4: 初期値・入力内容の長さに応じて入力欄の高さを自動調整（これ以上はスクロール＋手動リサイズに委ねる）
+const AUTO_GROW_MAX = 320;
+function autoGrowTA(el) {
+  if (!el) return;
+  // box-sizing:border-box では scrollHeight がボーダー分を含まないため、上下ボーダー幅を補って
+  // 「内容がぴったり収まる高さ」を計算する（誤差があると1〜2pxだけ溢れてスクロールバーが残ってしまう）
+  const cs = getComputedStyle(el);
+  const border = parseFloat(cs.borderTopWidth||0) + parseFloat(cs.borderBottomWidth||0);
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight + border, AUTO_GROW_MAX) + 'px';
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1604,6 +1625,12 @@ function renderBuilderFields(gi) {
         <textarea rows="3" style="min-height:0;background:var(--surface2);font-size:12px" placeholder="選択肢A&#10;選択肢B"
                   oninput="S.builderGroups[${gi}].fields[${fi}].options=this.value.split('\\n').filter(s=>s.trim())"
         >${(f.options||[]).join('\n')}</textarea></div>` : ''}
+      ${!needsOpts && f.type!=='repeat' ? `<div class="field">
+        <div class="field-hint">初期値（依頼書作成時にあらかじめ入力された状態にする）</div>
+        <textarea rows="2" style="min-height:0;background:var(--surface2);font-size:12px" placeholder="初期値（空白可）"
+                  oninput="S.builderGroups[${gi}].fields[${fi}].defaultValue=this.value"
+        >${esc(f.defaultValue||'')}</textarea>
+      </div>` : ''}
       ${f.type==='repeat' ? `<div class="field-row"><div class="field">
         <div class="field-hint">繰り返し単位ラベル</div>
         <input type="text" value="${esc(f.itemLabel||'')}" placeholder="例: 対象画面" style="background:var(--surface2)"
@@ -1617,7 +1644,7 @@ function renderBuilderFields(gi) {
   });
 }
 
-const addField = gi => { S.builderGroups[gi].fields.push({ id:uid(), label:'', key:'', type:'text', required:false, options:[], itemLabel:'', subFields:[] }); renderBuilderFields(gi); };
+const addField = gi => { S.builderGroups[gi].fields.push({ id:uid(), label:'', key:'', type:'text', required:false, options:[], itemLabel:'', subFields:[], defaultValue:'' }); renderBuilderFields(gi); };
 const removeField = (gi,fi) => { S.builderGroups[gi].fields.splice(fi,1); renderBuilderFields(gi); };
 function changeFieldType(gi,fi,type) { S.builderGroups[gi].fields[fi].type=type; renderBuilderFields(gi); }
 
@@ -1695,7 +1722,8 @@ function startForm(tplId) {
     status: STATUS.draft, report: null, reportedAt: null, revisions: [],
   };
   (S.current.groups||[]).forEach(g => {
-    (g.fields||[]).forEach(f => { f._value = f.type==='checkbox'||f.type==='repeat' ? [] : ''; });
+    // a4: 追加項目グループのフィールドにも初期値を適用（依頼内容セクションと同じ挙動に統一）
+    (g.fields||[]).forEach(f => { f._value = f.type==='checkbox'||f.type==='repeat' ? [] : (f.defaultValue || ''); });
   });
   renderDynamicForm(tpl);
   showFormUI();
@@ -1747,12 +1775,12 @@ function renderDynamicForm(tpl) {
   if (S.current.taboo !== null) {
     form.appendChild(mkSection('🚫','禁忌・制約','danger',true,`
       <div class="field"><div class="field-hint">AIにさせてはいけないこと。テンプレート初期値を編集できます。</div>
-      <textarea id="f-taboo" rows="4" oninput="S.current.taboo=this.value" onblur="autoSave()">${esc(S.current.taboo||'')}</textarea></div>`));
+      <textarea id="f-taboo" rows="4" oninput="autoGrowTA(this);S.current.taboo=this.value" onblur="autoSave()">${esc(S.current.taboo||'')}</textarea></div>`));
   }
   if (S.current.basics !== null) {
     form.appendChild(mkSection('📋','基本事項',null,true,`
       <div class="field"><div class="field-hint">毎回共通する前提・言語・スタイルなど</div>
-      <textarea id="f-basics" rows="4" oninput="S.current.basics=this.value" onblur="autoSave()">${esc(S.current.basics||'')}</textarea></div>`));
+      <textarea id="f-basics" rows="4" oninput="autoGrowTA(this);S.current.basics=this.value" onblur="autoSave()">${esc(S.current.basics||'')}</textarea></div>`));
   }
   // 依頼内容セクション（requestFields から動的生成）
   const rFields = S.current.requestFields || DEFAULT_REQUEST_SECTION.fields.map(f=>({...f,_value:''}));
@@ -1783,9 +1811,9 @@ function renderDynamicForm(tpl) {
         <label class="checkbox-option"><input type="radio" name="${kp}" value="${esc(o)}" ${val===o?'checked':''}
                onchange="setRField('${esc(f.key)}',this.value)" onblur="autoSave()">${esc(o)}</label>`).join('')}</div>`;
     } else {
-      // textarea (default) — d2: rows 廃止・自動高さ
+      // textarea (default) — d2: rows 廃止・自動高さ／a4: 初期値の長さに応じてさらに高さを自動調整
       inputHTML = `<textarea data-rkey="${esc(f.key)}" style="min-height:${(f.rows||3)*22}px" placeholder="${esc(f.placeholder||'')}"
-                             oninput="setRField('${esc(f.key)}',this.value)" onblur="autoSave()">${esc(val)}</textarea>`;
+                             oninput="autoGrowTA(this);setRField('${esc(f.key)}',this.value)" onblur="autoSave()">${esc(val)}</textarea>`;
     }
     return `<div class="field"><label class="field-label">${esc(f.label)}</label>${inputHTML}</div>`;
   }).join('');
@@ -1795,8 +1823,12 @@ function renderDynamicForm(tpl) {
   if (S.current.reportFormat !== null) {
     form.appendChild(mkSection('📊','作業報告形式',null,true,`
       <div class="field"><div class="field-hint">AIに求める報告フォーマット</div>
-      <textarea id="f-repfmt" rows="5" oninput="S.current.reportFormat=this.value" onblur="autoSave()">${esc(S.current.reportFormat||'')}</textarea></div>`));
+      <textarea id="f-repfmt" rows="5" oninput="autoGrowTA(this);S.current.reportFormat=this.value" onblur="autoSave()">${esc(S.current.reportFormat||'')}</textarea></div>`));
   }
+  // a4: 初期値が入っている項目は、開いた時点で内容に合わせて入力欄を広げておく
+  // （呼び出し元は renderDynamicForm() の直後に showFormUI() でコンテナを表示するため、
+  //   非表示の間は scrollHeight が 0 になり計測できない。表示反映後まで1tick遅延させる）
+  setTimeout(() => form.querySelectorAll('textarea').forEach(autoGrowTA), 0);
 }
 
 function mkSection(icon,title,badge,collapsible,bodyHTML) {
@@ -1843,7 +1875,7 @@ function mkFieldInput(f,gi,fi) {
   const rm = f.required ? '<span class="req">必須</span>' : '';
   const blur = 'onblur="autoSave()"';
   const kp = `g${gi}f${fi}`;
-  if (f.type==='textarea') return `<div class="field"><label class="field-label">${esc(f.label)} ${rm}</label><textarea ${blur} oninput="setGF(${gi},${fi},this.value)" rows="4">${esc(v)}</textarea></div>`;
+  if (f.type==='textarea') return `<div class="field"><label class="field-label">${esc(f.label)} ${rm}</label><textarea ${blur} oninput="autoGrowTA(this);setGF(${gi},${fi},this.value)" rows="4">${esc(v)}</textarea></div>`;
   if (f.type==='number')   return `<div class="field"><label class="field-label">${esc(f.label)} ${rm}</label><input type="number" value="${esc(v)}" ${blur} oninput="setGF(${gi},${fi},this.value)"></div>`;
   if (f.type==='url')      return `<div class="field"><label class="field-label">${esc(f.label)} ${rm}</label><input type="url" value="${esc(v)}" placeholder="https://" ${blur} oninput="setGF(${gi},${fi},this.value)"></div>`;
   if (f.type==='email')    return `<div class="field"><label class="field-label">${esc(f.label)} ${rm}</label><input type="email" value="${esc(v)}" ${blur} oninput="setGF(${gi},${fi},this.value)"></div>`;
