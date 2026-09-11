@@ -2,3 +2,5 @@
 {"timestamp": "2026-09-11T15:17:49", "pattern": 7, "label": "#7 タスク完了時の残タスク提示", "section": "完了報告", "used": {"plan-snapshot": 1}, "applicable": "7", "omissions": 0, "judgment": null, "session_id": ""}
 {"timestamp": "2026-09-11T16:27:08", "pattern": 24, "label": "#24 ユーザー指摘事項受領（既存挙動・UI・ドキュメント・実装結果への改善要望）", "section": "修正完了報告", "used": {"spec-cite": 0}, "applicable": "24", "omissions": 1, "judgment": "B", "session_id": ""}
 {"timestamp": "2026-09-11T16:28:46", "pattern": 24, "label": "#24 ユーザー指摘事項受領（既存挙動・UI・ドキュメント・実装結果への改善要望）", "section": "修正完了報告", "used": {"spec-cite": 0, "question-builder": 0}, "applicable": "24", "omissions": 1, "judgment": "B", "session_id": ""}
+{"timestamp": "2026-09-11T17:02:34", "pattern": 3, "label": "#3 派生 Q 発行（a/b/c/d 選択肢付き）", "section": "調査結果と確認Q", "used": {"question-builder": 1, "group-id-allocator": 1}, "applicable": "2,3", "omissions": 0, "judgment": null, "session_id": ""}
+{"timestamp": "2026-09-11T18:09:42", "pattern": null, "label": "#新規候補：他セッション宛て依頼書作成", "section": "運用管理宛 依頼書", "used": {"spec-cite": 0}, "applicable": "", "omissions": 0, "judgment": null, "session_id": ""}

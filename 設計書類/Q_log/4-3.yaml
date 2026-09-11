@@ -1,0 +1,23 @@
+group: 4-3
+qs:
+- num: 1
+  seq_id: Q-4-3-1
+  issued_at: '2026-09-11T17:02:17'
+  prerequisites: 現行のCLAUDE.md・初動引き継ぎ_20260911.md・06_プランログ.mdには反映手順の記載なし。開発依頼書/260330_「依頼書ビルダー」開発依頼書.xmlおよびAI依頼書ビルダーの開発1.4.0.xmlに過去の反映手順が現存（tools/BriefMandraft.htmlへの反映、docs/request-builder.html・main/webapp.htmlの更新、ホーム更新履歴への追記、portfolio19861119リモートへのpush）。portfolio-site側のgit
+    logでは2026-03-31のv1.9.0反映(dc6a5e3)が最終で、本日のGROUP-3修正4件は未反映。
+  judgment: ポートフォリオサイトへの反映・手順の文書化をどうするか
+  options:
+  - label: a
+    text: GROUP-3修正4件を今すぐportfolio-site側へ反映しpushまで実施
+  - label: b
+    text: 反映手順をCLAUDE.mdへ文書化するだけで実際の反映は見送る
+  - label: c
+    text: 手順をCLAUDE.mdへ文書化した上でGROUP-3修正4件も反映する
+    recommended: true
+  - label: d
+    text: 何もしない(現状維持)
+  recommendation_reason: null
+  answer: null
+  answered_at: null
+  steps: null
+  step_status: null
